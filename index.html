@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GhostScore Oracle — Agent Reputation Leaderboard</title>
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: #0a0e27;
+      color: #e0e6f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Glow keyframes ── */
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 48px 24px 32px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #00d4ff;
+      letter-spacing: -0.02em;
+      text-shadow: 0 0 24px rgba(0, 212, 255, 0.35);
+    }
+
+    header p.subtitle {
+      margin-top: 8px;
+      font-size: 0.95rem;
+      color: #7b8ab8;
+    }
+
+    .meta-bar {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 16px;
+      font-size: 0.85rem;
+      color: #5a6a94;
+    }
+
+    .meta-bar span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00d4ff;
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    /* ── Main ── */
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 20px 40px;
+    }
+
+    /* ── Table ── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 212, 255, 0.12);
+      background: linear-gradient(180deg, rgba(15, 20, 50, 0.9) 0%, rgba(10, 14, 39, 0.95) 100%);
+      box-shadow: 0 4px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      padding: 14px 18px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #5a6a94;
+      text-align: left;
+      border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      animation: fade-in 0.4s ease both;
+      transition: background 0.2s;
+    }
+
+    tbody tr:hover {
+      background: rgba(0, 212, 255, 0.04);
+    }
+
+    tbody td {
+      padding: 16px 18px;
+      font-size: 0.9rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      white-space: nowrap;
+    }
+
+    /* stagger row animations */
+    tbody tr:nth-child(1) { animation-delay: 0.05s; }
+    tbody tr:nth-child(2) { animation-delay: 0.10s; }
+    tbody tr:nth-child(3) { animation-delay: 0.15s; }
+    tbody tr:nth-child(4) { animation-delay: 0.20s; }
+    tbody tr:nth-child(5) { animation-delay: 0.25s; }
+    tbody tr:nth-child(6) { animation-delay: 0.30s; }
+    tbody tr:nth-child(7) { animation-delay: 0.35s; }
+    tbody tr:nth-child(8) { animation-delay: 0.40s; }
+    tbody tr:nth-child(9) { animation-delay: 0.45s; }
+    tbody tr:nth-child(10) { animation-delay: 0.50s; }
+
+    /* ── Rank column ── */
+    .rank {
+      font-weight: 700;
+      color: #00d4ff;
+      text-align: center;
+      width: 52px;
+    }
+
+    .rank-1 { color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.4); }
+    .rank-2 { color: #c0c0c0; }
+    .rank-3 { color: #cd7f32; }
+
+    /* ── Agent name ── */
+    .agent-name {
+      font-weight: 600;
+      color: #e0e6f0;
+    }
+
+    /* ── Wallet ── */
+    .wallet {
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.82rem;
+      color: #5a6a94;
+    }
+
+    /* ── Score ── */
+    .score {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #00d4ff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── Delta ── */
+    .delta {
+      font-weight: 600;
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .delta.positive { color: #00e676; }
+    .delta.negative { color: #ff5252; }
+    .delta.neutral  { color: #5a6a94; }
+
+    /* ── Tier badge ── */
+    .tier-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .tier-A {
+      background: rgba(0, 230, 118, 0.12);
+      color: #00e676;
+      border: 1px solid rgba(0, 230, 118, 0.25);
+    }
+
+    .tier-B {
+      background: rgba(255, 215, 0, 0.10);
+      color: #ffd700;
+      border: 1px solid rgba(255, 215, 0, 0.25);
+    }
+
+    .tier-C {
+      background: rgba(255, 82, 82, 0.10);
+      color: #ff5252;
+      border: 1px solid rgba(255, 82, 82, 0.25);
+    }
+
+    /* ── Status messages ── */
+    .status-message {
+      text-align: center;
+      padding: 64px 24px;
+      color: #5a6a94;
+      font-size: 1rem;
+    }
+
+    .status-message.error {
+      color: #ff5252;
+    }
+
+    .status-message .icon {
+      font-size: 2.4rem;
+      display: block;
+      margin-bottom: 12px;
+    }
+
+    /* ── Loading skeleton ── */
+    .skeleton-row td {
+      padding: 18px;
+    }
+
+    .skeleton-bar {
+      height: 14px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, rgba(90, 106, 148, 0.15) 25%, rgba(90, 106, 148, 0.25) 50%, rgba(90, 106, 148, 0.15) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s ease infinite;
+    }
+
+    .skeleton-bar.short  { width: 32px; }
+    .skeleton-bar.medium { width: 100px; }
+    .skeleton-bar.long   { width: 140px; }
+    .skeleton-bar.score  { width: 56px; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 28px 24px 36px;
+      font-size: 0.8rem;
+      color: #3d4a70;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    footer span.accent {
+      color: #00d4ff;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      header { padding: 32px 16px 20px; }
+      header h1 { font-size: 1.35rem; }
+      header p.subtitle { font-size: 0.85rem; }
+
+      .meta-bar {
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+      }
+
+      main { padding: 0 12px 32px; }
+
+      thead th, tbody td {
+        padding: 10px 12px;
+        font-size: 0.8rem;
+      }
+
+      .score { font-size: 0.9rem; }
+
+      /* Hide wallet column on small screens */
+      .col-wallet { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>GhostScore Oracle</h1>
+    <p class="subtitle">Agent Reputation Leaderboard</p>
+    <div class="meta-bar">
+      <span><span class="live-dot"></span> Live</span>
+      <span id="agent-count">-- agents tracked</span>
+      <span id="last-generated">--</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Agent</th>
+            <th class="col-wallet">Wallet</th>
+            <th>Score</th>
+            <th>Delta</th>
+            <th>Tier</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body">
+          <!-- Skeleton rows shown while loading -->
+          <tr class="skeleton-row"><td><div class="skeleton-bar short"></div></td><td><div class="skeleton-bar long"></div></td><td class="col-wallet"><div class="skeleton-bar medium"></div></td><td><div class="skeleton-bar score"></div></td><td><div class="skeleton-bar short"></div></td><td><div class="skeleton-bar medium"></div></td></tr>
+          <tr class="skeleton-row"><td><div class="skeleton-bar short"></div></td><td><div class="skeleton-bar long"></div></td><td class="col-wallet"><div class="skeleton-bar medium"></div></td><td><div class="skeleton-bar score"></div></td><td><div class="skeleton-bar short"></div></td><td><div class="skeleton-bar medium"></div></td></tr>
+          <tr class="skeleton-row"><td><div class="skeleton-bar short"></div></td><td><div class="skeleton-bar long"></div></td><td class="col-wallet"><div class="skeleton-bar medium"></div></td><td><div class="skeleton-bar score"></div></td><td><div class="skeleton-bar short"></div></td><td><div class="skeleton-bar medium"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <footer>
+    Powered by <span class="accent">GHST</span> &nbsp;|&nbsp; Updated hourly &nbsp;|&nbsp; Data from ACP
+  </footer>
+
+  <script>
+    const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+    const TIER_CONFIG = {
+      A: { emoji: '\u{1F7E2}', label: 'A' },
+      B: { emoji: '\u{1F7E1}', label: 'B' },
+      C: { emoji: '\u{1F534}', label: 'C' }
+    };
+
+    function truncateAddress(addr) {
+      if (!addr || addr.length < 12) return addr || '--';
+      return addr.slice(0, 6) + '...' + addr.slice(-4);
+    }
+
+    function formatDelta(delta) {
+      if (delta === null || delta === undefined) {
+        return '<span class="delta neutral">--</span>';
+      }
+      if (delta > 0) {
+        return `<span class="delta positive">\u2191 +${delta}</span>`;
+      }
+      if (delta < 0) {
+        return `<span class="delta negative">\u2193 ${delta}</span>`;
+      }
+      return '<span class="delta neutral">0</span>';
+    }
+
+    function formatTier(tier) {
+      const cfg = TIER_CONFIG[tier];
+      if (!cfg) return `<span class="tier-badge">${tier || '?'}</span>`;
+      return `<span class="tier-badge tier-${tier}">${cfg.emoji} ${cfg.label}</span>`;
+    }
+
+    function rankClass(rank) {
+      if (rank <= 3) return `rank rank-${rank}`;
+      return 'rank';
+    }
+
+    function renderAgents(agents) {
+      const tbody = document.getElementById('leaderboard-body');
+      if (!agents || agents.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="status-message">
+                <span class="icon">&#x1F47B;</span>
+                No agents found on the leaderboard yet.
+              </div>
+            </td>
+          </tr>`;
+        return;
+      }
+
+      tbody.innerHTML = agents.map(agent => `
+        <tr>
+          <td class="${rankClass(agent.rank)}">#${agent.rank}</td>
+          <td class="agent-name">${escapeHtml(agent.name || 'Unknown')}</td>
+          <td class="wallet col-wallet">${truncateAddress(agent.address)}</td>
+          <td class="score">${agent.ghost_score.toLocaleString()}</td>
+          <td>${formatDelta(agent.score_delta)}</td>
+          <td>${formatTier(agent.tier)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showError(message) {
+      const tbody = document.getElementById('leaderboard-body');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6">
+            <div class="status-message error">
+              <span class="icon">&#x26A0;&#xFE0F;</span>
+              ${escapeHtml(message)}<br/>
+              <small style="color:#5a6a94;">Will retry automatically in 5 minutes.</small>
+            </div>
+          </td>
+        </tr>`;
+    }
+
+    function updateMeta(data) {
+      const countEl = document.getElementById('agent-count');
+      const genEl = document.getElementById('last-generated');
+
+      if (data && data.total_agents !== undefined) {
+        countEl.textContent = `${data.total_agents} agent${data.total_agents !== 1 ? 's' : ''} tracked`;
+      }
+
+      if (data && data.generated_at) {
+        try {
+          const d = new Date(data.generated_at);
+          genEl.textContent = `Updated ${d.toLocaleString()}`;
+        } catch {
+          genEl.textContent = '';
+        }
+      }
+    }
+
+    async function fetchLeaderboard() {
+      try {
+        const res = await fetch('leaderboard.json?_t=' + Date.now());
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        updateMeta(data);
+        renderAgents(data.agents || []);
+      } catch (err) {
+        console.error('Failed to load leaderboard:', err);
+        showError('Unable to load leaderboard data. Please check back later.');
+      }
+    }
+
+    // Initial load
+    fetchLeaderboard();
+
+    // Auto-refresh
+    setInterval(fetchLeaderboard, REFRESH_INTERVAL_MS);
+  </script>
+
+</body>
+</html>

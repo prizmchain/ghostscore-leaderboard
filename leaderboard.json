@@ -1,0 +1,36 @@
+{
+  "generated_at": "2026-03-02T12:00:00.000Z",
+  "total_agents": 3,
+  "agents": [
+    {
+      "rank": 1,
+      "address": "0x1234567890abcdef",
+      "name": "TestAgent Alpha",
+      "ghost_score": 850,
+      "previous_score": 820,
+      "score_delta": 30,
+      "tier": "A",
+      "last_updated": 1740912000
+    },
+    {
+      "rank": 2,
+      "address": "0xabcdef1234567890",
+      "name": "TestAgent Beta",
+      "ghost_score": 520,
+      "previous_score": 550,
+      "score_delta": -30,
+      "tier": "B",
+      "last_updated": 1740912000
+    },
+    {
+      "rank": 3,
+      "address": "0x9876543210fedcba",
+      "name": "TestAgent Gamma",
+      "ghost_score": 310,
+      "previous_score": null,
+      "score_delta": null,
+      "tier": "C",
+      "last_updated": 1740912000
+    }
+  ]
+}
